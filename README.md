@@ -1,5 +1,4 @@
 # vue-memory-game
-<<<<<<< HEAD
 
 > Classic memory matching game in Vue.js
 
@@ -20,12 +19,12 @@ npm run build --report
 ```
 
 For a detailed explanation on how things work, check out the [guide](http://vuejs-templates.github.io/webpack/) and [docs for vue-loader](http://vuejs.github.io/vue-loader).
-=======
+
 Simple Vue.js application for the ATL Vue.js meetup.
 
 
 
-
+```
 dsandor@imac:~/Projects$ vue init webpack vue-memory-game
 
 ? Project name vue-memory-game
@@ -38,6 +37,9 @@ dsandor@imac:~/Projects$ vue init webpack vue-memory-game
 ? Set up unit tests No
 ? Setup e2e tests with Nightwatch? No
 ? Should we run `npm install` for you after the project has been created? (recommended) yarn
+```
 
+## Coding Steps
 
->>>>>>> 1c3653a78f6681f94a1b17346cae83bbcdca0667
+1. Add component Game Board
+2. 

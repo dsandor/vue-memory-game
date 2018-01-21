@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import GameTile from './GameTile3';
+import GameTile from './GameTile2';
 
 export default {
   name: 'GameBoard',

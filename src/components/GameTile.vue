@@ -25,5 +25,11 @@ export default {
 
 .game-tile-content {
   color: white;
+  display: inline-block;
+  width: 60px;
+  height: 60px;
+  margin: 16px;
+  background: magenta;
+  border-width: 2px;
 }
 </style>

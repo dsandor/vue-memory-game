@@ -235,3 +235,504 @@ Finally, we are going to style the game board so it does not look so dull.
 }
 </style>
 ```
+
+Before we test our game board we must first tell Vue that we want to display our GameBoard instead of the HelloWorld component.
+
+Do this by modifying the `App.vue` file to look like this (leave the style tag alone):
+
+```
+<template>
+  <div id="app">
+    <GameBoard/>
+  </div>
+</template>
+
+<script>
+import GameBoard from './components/GameBoard';
+
+export default {
+  name: 'App',
+  components: {
+    GameBoard,
+  },
+};
+</script>
+```
+
+Now if you start your dev server with `yarn dev` or just refresh your browser you should see a game board with ugly magenta tiles each with a number.
+
+![Game board, first stab.](https://raw.githubusercontent.com/dsandor/vue-memory-game/master/docs/img/game-board-01.png)
+
+Lets upgrade our tiles a bit to make them initially hide and have some kind of border.
+
+Edit the **GameTile.vue** template to look like the template below.  Here we are adding a container div that itself is clickable.  We are going to also conditionally add a CSS class to the `<p>` element based on the local data state.
+
+```
+<template>
+  <div class="game-tile-container" @click="clickedTile">
+    <p class="game-tile-content"
+      :class="{ 'game-tile-hidden': isContentHidden }">{{ tileContent }}</p>&nbsp;
+  </div>
+</template>
+
+```
+
+Lets add the isContentHidden data element and actually modify it when a user clicks.
+
+```
+<script>
+export default {
+  name: 'GameTile',
+  props: ['tileContent'],
+  data() {
+    return {
+      isContentHidden: true,
+    };
+  },
+  methods: {
+    clickedTile() {
+      this.isContentHidden = !this.isContentHidden;
+    },
+  },
+};
+</script>
+```
+
+Also, add some CSS classes to handle the new states.
+
+```
+<style scoped>
+
+.game-tile-content {
+  color: white;
+}
+
+.game-tile-hidden {
+  display: none;
+  
+}
+
+.game-tile-container {
+  display: inline-block;
+  width: 60px;
+  height: 60px;
+  margin: 16px;
+  background: magenta;
+  border-width: 2px;
+  border-style: dotted;
+  border-color: black;
+}
+</style>
+```
+
+Now when you look at our game board the initial state is better but there is a little wonkiness when you click a tile! Oh my!  We will fix that :)
+
+![Game board, first stab.](https://raw.githubusercontent.com/dsandor/vue-memory-game/master/docs/img/game-board-02.png)
+
+## Store - Vuex 
+
+Why do we need a state store for our little game?  Think about this board.  Each tile needs just deals with it's own visibility.  How does the game know if there is a match?  Do the tiles need to know about each other?
+
+We are introducing a state store to be the single place to manage the state of the application.  This will use one way binding so that the `GameTile` components are blissfully unaware of each other.  All they care about in life is to display their word (or not) and tell the game when a user has clicked themselves.
+
+So now we will start creating our store.
+
+First, we will need some colors for later.
+
+Create a directory under `./src` named `store` and add a new file `colors.js`.
+
+**colors.js**
+
+```
+const Colors = [
+  '#e6194b',
+  '#3cb44b',
+  '#ffe119',
+  '#0082c8',
+  '#f58231',
+  '#911eb4',
+  '#46f0f0',
+  '#d2f53c',
+  '#000080',
+  '#808000',
+  '#fabebe',
+  '#008080',
+  '#aaffc3',
+  '#aa6e28',
+  '#808080',
+];
+
+export default Colors;
+```
+
+Also under `./src/store` create a file `index.js`
+
+**src/store/index.js**
+
+```
+/* eslint-disable no-param-reassign */
+
+import Vue from 'vue';
+import Vuex from 'vuex';
+import Colors from './colors';
+
+Vue.use(Vuex);
+
+/*
+  tiles object schema
+  {
+    id: Int,                // Used to identify a tile.
+    isVisible: Boolean,     // If true the content (word) of the tile is visible.
+    word: String            // The word on the tile.
+    matched: Boolean,       // True if this tile has been matched with another tile.
+    highlightColor: String, // The color to highlight the tile when it is matched.
+    selected: Boolean,      // If the user clicked a hidden tile it becomes selected.
+  }
+*/
+
+// milliseconds, time before we hide the bad match pair.
+const timeoutBeforeClearingBadMatch = 1000;
+
+const appState = {
+  tiles: [],
+  matchCount: 0,
+};
+
+const mutations = {
+  setTiles(state, tiles) {
+    state.tiles = tiles;
+  },
+
+  updateTile(state, { tileId, newTile }) {
+    const index = state.tiles.findIndex(tile => tile.id === tileId);
+
+    if (index >= 0) {
+      Vue.set(state.tiles, index, Object.assign({}, state.tiles[index], newTile));
+
+      // state.tiles[index] = Object.assign({}, state.tiles[index], newValue);
+    }
+  },
+
+  incrementMatchCount(state) {
+    state.matchCount += 1;
+  },
+
+  markTileSelected(state, tileId) {
+    const index = state.tiles.findIndex(tile => tile.id === tileId);
+
+    if (index >= 0) {
+      Vue.set(state.tiles, index, Object.assign({}, state.tiles[index],
+        { selected: true, isVisible: true }));
+
+      /*
+      state.tiles[index] = Object.assign({}, state.tiles[index],
+        { selected: true, isVisible: true });
+      */
+    }
+  },
+
+  clearSelected(state) {
+    const newList = state.tiles.map((tile) => {
+      tile.isVisible = tile.matched;
+      tile.selected = false;
+
+      return tile;
+    });
+
+    state.tiles = newList;
+  },
+};
+
+const actions = {
+  setAllTiles({ commit }, tiles) {
+    commit('setTiles', tiles);
+  },
+  setTileVisibility({ commit, state }, tileId, isVisible) {
+    const tile = state.tiles.find(t => t.id === tileId);
+
+    if (tile) {
+      const newTile = Object.assign({}, tile, { isVisible });
+
+      commit('updateTile', { tileId, newTile });
+    }
+  },
+
+  setTilesMatch({ commit, state }, tileIds) {
+    commit('incrementMatchCount');
+
+    const colorIndex = state.matchCount - 1;
+
+    while (tileIds.length > 0) {
+      const tileId = tileIds.splice(0, 1).pop();
+      const tileIndex = state.tiles.findIndex(t => t.id === tileId);
+
+      const newTile = Object.assign({}, state.tiles[tileIndex],
+        {
+          matched: true,
+          highlightColor: Colors[colorIndex],
+          selected: false,
+          isVisible: true,
+        });
+
+      commit('updateTile', { tileId, newTile });
+    }
+  },
+
+  selectTile(context, tileId) {
+    const { commit, state, dispatch } = context;
+    const selectedTiles = state.tiles.filter(t => t.selected);
+    const clickedTile = state.tiles.find(t => t.id === tileId);
+
+    if (selectedTiles.length === 1) {
+      // one selected, test to see if this tile matches that tile.
+      const selectedTile = selectedTiles.pop();
+
+      // eslint-disable-next-line
+      if (selectedTile.id === tileId) {
+        // user is pulling a fast one and is selecting the same tile twice!
+        // eslint-disable-next-line
+        return;
+      } else if (selectedTile.word === clickedTile.word) {
+        // It's a match!
+        dispatch('setTilesMatch', [selectedTile.id, clickedTile.id]);
+        // eslint-disable-next-line
+        return;
+      }
+
+      // not a match.. mark selected and make visible,
+      // then after a timeout unselect and make not visible.
+      commit('markTileSelected', tileId);
+
+      setTimeout(() => {
+        commit('clearSelected');
+      }, timeoutBeforeClearingBadMatch);
+    } else if (selectedTiles.length === 0) {
+      commit('markTileSelected', tileId);
+    }
+  },
+};
+
+export default new Vuex.Store({
+  state: appState,
+  mutations,
+  actions,
+});
+```
+
+We will go over this code in the workshop but this is the guts of the state management of our game.
+
+Now we need to update the `src/main.js` file to tell Vue to use our new store.
+
+**src/main.js**
+
+```
+import Vue from 'vue';
+import App from './App';
+
+import store from './store';
+
+Vue.config.productionTip = false;
+
+/* eslint-disable no-new */
+new Vue({
+  el: '#app',
+  components: { App },
+  template: '<App/>',
+  store,
+});
+```
+
+Now we need to update our game board to use the store for the tiles and add some game logic like what the names of the tiles are, shuffle them, etc.  This logic can also be placed in our store so that the view logic is separate from our game logic.  You can do that on your own and call an action to create the tiles and shuffle them.
+
+Edit the `src/components/GameBoard.vue` to use the store.
+
+**src/components/GameBoard.vue**
+
+```
+<template>
+  <div class="game-board-container">
+    <button class="btn" @click="createTiles">Create Tiles</button>
+    <div class="game-board">
+      <GameTile v-for="tile in $store.state.tiles" :key="tile.id" :tile="tile" />
+    </div>
+  </div>
+</template>
+
+<script>
+/* eslint-disable no-plusplus */
+/* eslint-disable no-param-reassign */
+import GameTile from './GameTile3';
+
+/*
+  Fisher-Yates shuffle.
+  https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle#The_modern_algorithm
+  https://stackoverflow.com/questions/6274339/how-can-i-shuffle-an-array
+*/
+const shuffle = (a) => {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+export default {
+  name: 'GameBoard',
+  components: {
+    GameTile,
+  },
+  methods: {
+    createTiles() {
+      const tiles = [];
+
+      const words = [
+        'duck', 'cat', 'mouse', 'aardvark',
+        'mole', 'lizard', 'goat', 'dog', 'fish',
+        'lion', 'tiger', 'hawk', 'owl', 'hamster', 'snake',
+        'duck', 'cat', 'mouse', 'aardvark',
+        'mole', 'lizard', 'goat', 'dog', 'fish',
+        'lion', 'tiger', 'hawk', 'owl', 'hamster', 'snake',
+      ];
+
+      words.forEach((word, ordinal) => {
+        tiles.push({ id: ordinal, word, selected: false, isVisible: false, matched: false });
+      });
+
+      shuffle(tiles);
+
+      this.$store.dispatch('setAllTiles', tiles);
+    },
+  },
+};
+</script>
+
+<!-- Add "scoped" attribute to limit CSS to this component only -->
+<style scoped>
+.game-board {
+  background: grey;
+  height: 100%;
+  text-align: center;
+  margin: 0 auto;
+  height: 495px;
+  width: 640px;
+}
+
+.game-board-container {
+
+}
+
+.btn {
+  background: #3498db;
+  background-image: -webkit-linear-gradient(top, #3498db, #2980b9);
+  background-image: -moz-linear-gradient(top, #3498db, #2980b9);
+  background-image: -ms-linear-gradient(top, #3498db, #2980b9);
+  background-image: -o-linear-gradient(top, #3498db, #2980b9);
+  background-image: linear-gradient(to bottom, #3498db, #2980b9);
+  -webkit-border-radius: 0;
+  -moz-border-radius: 0;
+  border-radius: 0px;
+  text-shadow: 1px 1px 3px #666666;
+  font-family: Arial;
+  color: #ffffff;
+  font-size: 20px;
+  padding: 10px 20px 10px 20px;
+  text-decoration: none;
+  margin-bottom: 10px;
+}
+
+.btn:hover {
+  background: #3cb0fd;
+  background-image: -webkit-linear-gradient(top, #3cb0fd, #3498db);
+  background-image: -moz-linear-gradient(top, #3cb0fd, #3498db);
+  background-image: -ms-linear-gradient(top, #3cb0fd, #3498db);
+  background-image: -o-linear-gradient(top, #3cb0fd, #3498db);
+  background-image: linear-gradient(to bottom, #3cb0fd, #3498db);
+  text-decoration: none;
+}
+</style>
+
+```
+
+Finally, we edit our `GameTile.vue` componenet to also use the store.
+
+**src/components/GameTile.vue**
+
+```
+<template>
+  <div class="game-tile-container"
+      @click="clickedTile"
+      :style="tileStyle"
+    >
+    <p class="game-tile-content">{{ tileContent }}&nbsp;</p>
+  </div>
+</template>
+
+<script>
+export default {
+  name: 'GameTile',
+  props: ['tile'],
+  data() {
+    return {
+      isContentHidden: true,
+    };
+  },
+  computed: {
+    tileContent() {
+      if (this.tile.isVisible) {
+        return this.tile.word;
+      }
+
+      return '';
+    },
+    tileStyle() {
+      return {
+        'border-style': this.tile.matched ? 'solid' : 'dotted',
+        'border-color': this.tile.matched ? this.tile.highlightColor : 'black',
+      };
+    },
+  },
+  methods: {
+    clickedTile() {
+      this.$store.dispatch('selectTile', this.tile.id);
+    },
+  },
+};
+</script>
+
+<!-- Add "scoped" attribute to limit CSS to this component only -->
+<style scoped>
+
+.game-tile-content {
+  color: #333;
+}
+
+.game-tile-hidden {
+  display: none;
+}
+
+.game-tile-container {
+  display: inline-block;
+  width: 60px;
+  height: 60px;
+  margin: 16px;
+  background: whitesmoke;
+  border-width: 2px;
+  border-style: dotted;
+  border-color: black;
+}
+</style>
+
+```
+
+Now, when you refresh (and you probably have to restart the dev server with `yarn dev` if the dev server blew up with any of our updates), you will see the final game board.
+
+![Completed Game Board](https://raw.githubusercontent.com/dsandor/vue-memory-game/master/docs/img/example-game-board.png)
+
+## Questions?  Improvements?
+
+*  How can we improve on our state store?
+*  Can we move the game logic to a server?
+*  How hard would it be to change the tiles from using words to using images?
+*  Where in the lifecycle can we initialize the tiles so the user does not need to click the `Create Tiles` button?
+*  How hard would it be to animate the tiles when they flip?
+

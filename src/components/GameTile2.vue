@@ -1,7 +1,7 @@
 <template>
   <div class="game-tile-container" @click="clickedTile">
     <p class="game-tile-content"
-      :class="{ 'game-tile-hidden': isContentHidden }">{{ tileContent }}</p>&nbsp;
+      :class="{ 'game-tile-hidden': isContentHidden }">{{ tileContent }}</p>
   </div>
 </template>
 
@@ -16,8 +16,7 @@ export default {
   },
   methods: {
     clickedTile() {
-      // eslint-disable-next-line
-      alert(`clicked tile: ${this.tileContent}`);
+      this.isContentHidden = !this.isContentHidden;
     },
   },
 };
@@ -32,6 +31,7 @@ export default {
 
 .game-tile-hidden {
   display: none;
+  
 }
 
 .game-tile-container {

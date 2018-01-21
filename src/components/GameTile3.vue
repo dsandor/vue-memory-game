@@ -1,27 +1,39 @@
 <template>
-  <div class="game-tile-container" @click="clickedTile">
-    <p class="game-tile-content">{{ displayText }}&nbsp;</p>
+  <div class="game-tile-container"
+      @click="clickedTile"
+      :style="tileStyle"
+    >
+    <p class="game-tile-content">{{ tileContent }}&nbsp;</p>
   </div>
 </template>
 
 <script>
 export default {
   name: 'GameTile',
-  props: ['tileContent'],
+  props: ['tile'],
   data() {
     return {
       isContentHidden: true,
-      displayText: '',
     };
+  },
+  computed: {
+    tileContent() {
+      if (this.tile.isVisible) {
+        return this.tile.word;
+      }
+
+      return '';
+    },
+    tileStyle() {
+      return {
+        'border-style': this.tile.matched ? 'solid' : 'dotted',
+        'border-color': this.tile.matched ? this.tile.highlightColor : 'black',
+      };
+    },
   },
   methods: {
     clickedTile() {
-      this.isContentHidden = !this.isContentHidden;
-      if (this.isContentHidden) {
-        this.displayText = '';
-      } else {
-        this.displayText = this.tileContent;
-      }
+      this.$store.dispatch('selectTile', this.tile.id);
     },
   },
 };
@@ -31,7 +43,7 @@ export default {
 <style scoped>
 
 .game-tile-content {
-  color: white;
+  color: #333;
 }
 
 .game-tile-hidden {
@@ -43,7 +55,7 @@ export default {
   width: 60px;
   height: 60px;
   margin: 16px;
-  background: magenta;
+  background: whitesmoke;
   border-width: 2px;
   border-style: dotted;
   border-color: black;

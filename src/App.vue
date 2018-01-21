@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import GameBoard from './components/GameBoard';
+import GameBoard from './components/GameBoard2-state';
 
 export default {
   name: 'App',

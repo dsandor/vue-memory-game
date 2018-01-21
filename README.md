@@ -65,6 +65,9 @@ npm i yarn vue-cli -g
 
 The board will contain 30 tiles and will be laid out on a 640 x 496 pixel game board.  The player can click a tile to reveal a word on the tile. The player needs to match pairs of words.  If a player clicks two tiles and they do not match the tiles must stay visible for 1 second and then disappear.  When a match is made, the words stay visible and the pair is given a unique colored border.
 
+![Completed Game Board](https://raw.githubusercontent.com/dsandor/vue-memory-game/master/docs/img/example-game-board.png)
+
+
 ### Create the project using the vue command line.
 
 For the purposes of this documentation I am going to assume the project will be created in a folder `/Projects` we are going to use the Vue command line utility in order to bootstrap a webpack based vue template that we will work from.  We will name this project `vue-memory-game` so the files for this project will be in `~/Project/vue-memory-game`.

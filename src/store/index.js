@@ -107,8 +107,6 @@ const actions = {
   },
 
   selectTile(context, tileId) {
-    console.log('selecting tile:', tileId);
-
     const { commit, state, dispatch } = context;
     const selectedTiles = state.tiles.filter(t => t.selected);
     const clickedTile = state.tiles.find(t => t.id === tileId);

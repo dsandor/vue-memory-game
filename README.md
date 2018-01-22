@@ -408,8 +408,11 @@ const mutations = {
 
     if (index >= 0) {
       Vue.set(state.tiles, index, Object.assign({}, state.tiles[index], newTile));
+      /*
+        This code will not trigger re-render so we use the code about.
 
-      // state.tiles[index] = Object.assign({}, state.tiles[index], newValue);
+        state.tiles[index] = Object.assign({}, state.tiles[index], newValue);
+      */
     }
   },
 
@@ -447,15 +450,6 @@ const actions = {
   setAllTiles({ commit }, tiles) {
     commit('setTiles', tiles);
   },
-  setTileVisibility({ commit, state }, tileId, isVisible) {
-    const tile = state.tiles.find(t => t.id === tileId);
-
-    if (tile) {
-      const newTile = Object.assign({}, tile, { isVisible });
-
-      commit('updateTile', { tileId, newTile });
-    }
-  },
 
   setTilesMatch({ commit, state }, tileIds) {
     commit('incrementMatchCount');
@@ -480,7 +474,10 @@ const actions = {
 
   selectTile(context, tileId) {
     const { commit, state, dispatch } = context;
+
+    // selectedTiles will contain all the tiles the user PREVIOUSLY clicked on.
     const selectedTiles = state.tiles.filter(t => t.selected);
+    // clickedTile is the tile the user actually clicked this time.
     const clickedTile = state.tiles.find(t => t.id === tileId);
 
     if (selectedTiles.length === 1) {
